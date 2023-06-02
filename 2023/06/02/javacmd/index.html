@@ -3,7 +3,7 @@
 <html lang="zh-CN">
     <head>
         <meta charset="utf-8" />
-        <title>Tags: java | Galaxy</title>
+        <title>java命令执行 | Galaxy</title>
         <meta name="author" content="star" />
         <meta name="description" content="" />
         <meta name="keywords" content="" />
@@ -34,6 +34,12 @@
 <script src="/js/lib/preview.js"></script>
 
 
+
+
+
+
+
+<script src="https://cdn.staticfile.org/twikoo/1.6.16/twikoo.all.min.js"></script>
 
 
 
@@ -146,97 +152,125 @@
 
             <transition name="into">
                 <div id="main" v-show="!loading">
-                    <div id="archives">
-    
-    <div class="categories-tags">
-        
-        
-        <span>
-            <a href="/tags/java/" style="background: linear-gradient(120deg, #9abbf7 0%, #ffbbf4 100%)">
-                <span class="icon">
-                    <i class="fa-solid fa-tags fa-fw"></i>
-                </span>
-                java
-            </a>
+                    <div class="article">
+    <div>
+        <h1>java命令执行</h1>
+    </div>
+    <div class="info">
+        <span class="date">
+            <span class="icon">
+                <i class="fa-solid fa-calendar fa-fw"></i>
+            </span>
+            2023/6/2
         </span>
         
-        
-        
-        
-        
-        <span>
-            <a href="/tags/java%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/" style="background: #ffa2c4">
+        <span class="category">
+            <a href="/categories/java%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/">
                 <span class="icon">
-                    <i class="fa-solid fa-tags fa-fw"></i>
+                    <i class="fa-solid fa-bookmark fa-fw"></i>
                 </span>
                 java代码审计
             </a>
         </span>
         
         
-        
-        <span>
-            <a href="/tags/%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C/" style="background: #00a596">
-                <span class="icon">
-                    <i class="fa-solid fa-tags fa-fw"></i>
-                </span>
-                命令执行
-            </a>
+        <span class="tags">
+            <span class="icon">
+                <i class="fa-solid fa-tags fa-fw"></i>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/java%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/" style="color: #00bcd4">java代码审计</a>
+            </span>
+            
+            <span class="tag">
+                
+                <a href="/tags/%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C/" style="color: #00a596">命令执行</a>
+            </span>
+            
         </span>
-        
-        
-        
-        <span>
-            <a href="/tags/commencollection%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" style="background: #03a9f4">
-                <span class="icon">
-                    <i class="fa-solid fa-tags fa-fw"></i>
-                </span>
-                commencollection反序列化
-            </a>
-        </span>
-        
         
     </div>
     
-    <div class="timeline">
-        <div class="timeline-tail"></div>
-        <div class="timeline-content">
-            <div class="item-time">2023/6/2</div>
-            <a href="/2023/06/02/sa/">
-                <h3>java反序列化 cc1</h3>
-            </a>
-            <div class="info">
-                
-                <span class="category">
-                    <a href="/categories/java%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/">
-                        <span class="icon">
-                            <i class="fa-solid fa-bookmark fa-fw"></i>
-                        </span>
-                        java反序列化
-                    </a>
-                </span>
-                
-                
-                <span class="tags">
-                    <span class="icon">
-                        <i class="fa-solid fa-tags fa-fw"></i>
-                    </span>
-                    
-                    <span class="tag">
-                        
-                        <a href="/tags/java/" style="color: #00bcd4">java</a>
-                    </span>
-                    
-                    <span class="tag">
-                        
-                        <a href="/tags/commencollection%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" style="color: #ff7d73">commencollection反序列化</a>
-                    </span>
-                    
-                </span>
-                
-            </div>
-        </div>
+    <div class="content" v-pre>
+        <p>##java 代码审计之命令执行的多种方式<br>
+ ### 三种基本执行方式</p>
+<pre><code>java.lang.Runtime#exec()     
+java.lang.ProcessBuilder#start()
+java.lang.ProcessImpl#start()
+</code></pre>
+<p>####Runtime  基本执行方式</p>
+<pre><code>Process Runexec = Runtime.getRuntime().exec(&quot;cmd /c dir&quot;);  #通过调用Runtime类的静态方法getRuntime返回的runtime类的方法exec来执行命令
+InputStream in = Runexec.getInputStream();#返回的数据流要经过手动输出，才能出现在终端中
+ByteArrayOutputStream bos = new ByteArrayOutputStream();
+byte[] bytes = new byte[1024];
+int size;
+while((size = in.read(bytes)) &gt; 0)
+    bos.write(bytes,0,size);
+System.out.println(bos.toString());
+</code></pre>
+<p>runtime.exec 调用</p>
+<pre><code>return new ProcessBuilder(cmdarray)
+            .environment(envp)
+            .directory(dir)
+            .start();
+</code></pre>
+<p>分析 ProcessBuilder start 方法  大致分为三块</p>
+<pre><code>public Process start() throws IOException &#123;
+        
+    SecurityManager security = System.getSecurityManager();    #存在一个安全性检查，只有配置了安全策略才会生效
+        if (security != null)
+            security.checkExec(prog);
+
+        String dir = directory == null ? null : directory.toString();
+
+        for (int i = 1; i &lt; cmdarray.length; i++) &#123;  #不允许有\x0000字节的存在，只能有\x00
+            if (cmdarray[i].indexOf('\u0000') &gt;= 0) &#123;
+                throw new IOException(&quot;invalid null character in command&quot;);
+            &#125;
+        &#125;
+
+        
+        return ProcessImpl.start(cmdarray,       #调用ProcessImpl.start()方法执行命令
+                                     environment,
+                                     dir,
+                                     redirects,
+                                     redirectErrorStream);
+    &#125;
+</code></pre>
+<p>ProcessImpl start 方法构造新的类 ProcessImpl</p>
+<pre><code>static Process start(String cmdarray[],
+                         java.util.Map&lt;String,String&gt; environment,
+                         String dir,
+                         ProcessBuilder.Redirect[] redirects,
+                         boolean redirectErrorStream)
+                    return new ProcessImpl(cmdarray, envblock, dir,
+                                   stdHandles, redirectErrorStream);
+                     
+</code></pre>
+<p>本质上三种方法都是在调用 ProcessImpl.start ()<br>
+ 模拟调用</p>
+<pre><code>Process Runexec = Runtime.getRuntime().exec(&quot;calc&quot;);  #成功执行
+Process p = new ProcessBuilder(new String[]&#123;&quot;cmd&quot;,&quot;/c&quot;,&quot;dir&quot;&#125;).enviroment(null).directory(null).start();    #enviroment方法时内部方法，无法外部调用
+去掉enviroment，执行成功
+Process p = new ProcessBuilder(new String[]&#123;&quot;cmd&quot;,&quot;/c&quot;,&quot;dir&quot;&#125;).directory(null).start();
+
+Process p = ProcessPml.start(new String[]&#123;&quot;cmd&quot;,&quot;/c&quot;,&quot;dir&quot;&#125;,null,null,null,null,null);    #ProcessPml.start 该方法作用域为defualt无法外部调用
+</code></pre>
+<p>作用域调用失败，可以参考下一篇 java 反射的原理获取方法，执行命令</p>
+
     </div>
+    
+    
+    
+    
+    
+    
+    <div id="comment">
+        <div id="twikoo-container"></div>
+    </div>
+    
     
 </div>
 
@@ -269,6 +303,22 @@
             
         </div>
         <script src="/js/main.js"></script>
+        
+        
+
+
+
+<script>
+    twikoo.init({
+        el: "#twikoo-container",
+        envId: "",
+        region: "",
+        path: location.pathname,
+        lang: "zh-CN",
+    })
+</script>
+
+
         
     </body>
 </html>

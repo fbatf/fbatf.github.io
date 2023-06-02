@@ -169,7 +169,162 @@
         
 
 <div class="post">
-    <a href="/2023/06/02/javacc1/">
+    <a href="/2023/06/02/hello-world/">
+        <h2 class="post-title">Hello World</h2>
+    </a>
+    <div class="category-and-date">
+        
+        <span class="date">
+            <span class="icon">
+                <i class="fa-solid fa-calendar fa-fw"></i>
+            </span>
+            2023/6/2
+        </span>
+        
+        
+    </div>
+    <div class="description">
+        <div class="content" v-pre>
+            
+            <p>Welcome to <a target="_blank" rel="noopener" href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a target="_blank" rel="noopener" href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a target="_blank" rel="noopener" href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a target="_blank" rel="noopener" href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<h2 id="quick-start"><a class="markdownIt-Anchor" href="#quick-start">#</a> Quick Start</h2>
+<h3 id="create-a-new-post"><a class="markdownIt-Anchor" href="#create-a-new-post">#</a> Create a new post</h3>
+<figure class="highlight bash"><figcaption data-lang="bash"><span>h</span></figcaption><table><tr><td data-num="1"></td><td><pre>$ hexo new <span class="token string">"My New Post"</span></pre></td></tr></table></figure><p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/writing.html">Writing</a></p>
+<h3 id="run-server"><a class="markdownIt-Anchor" href="#run-server">#</a> Run server</h3>
+<figure class="highlight bash"><figcaption data-lang="bash"><span>h</span></figcaption><table><tr><td data-num="1"></td><td><pre>$ hexo server</pre></td></tr></table></figure><p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/server.html">Server</a></p>
+<h3 id="generate-static-files"><a class="markdownIt-Anchor" href="#generate-static-files">#</a> Generate static files</h3>
+<figure class="highlight bash"><figcaption data-lang="bash"><span>h</span></figcaption><table><tr><td data-num="1"></td><td><pre>$ hexo generate</pre></td></tr></table></figure><p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/generating.html">Generating</a></p>
+<h3 id="deploy-to-remote-sites"><a class="markdownIt-Anchor" href="#deploy-to-remote-sites">#</a> Deploy to remote sites</h3>
+<figure class="highlight bash"><figcaption data-lang="bash"><span>h</span></figcaption><table><tr><td data-num="1"></td><td><pre>$ hexo deploy</pre></td></tr></table></figure>
+            
+        </div>
+    </div>
+    <div class="post-tags">
+        
+        
+    </div>
+    <a href="/2023/06/02/hello-world/" class="go-post">阅读全文</a>
+</div>
+
+<div class="post">
+    <a href="/2023/06/02/javacmd/">
+        <h2 class="post-title">java命令执行</h2>
+    </a>
+    <div class="category-and-date">
+        
+        <span class="category">
+            <a href="/categories/java%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/">
+                <span class="icon">
+                    <i class="fa-solid fa-bookmark fa-fw"></i>
+                </span>
+                java代码审计
+            </a>
+        </span>
+        
+        <span class="date">
+            <span class="icon">
+                <i class="fa-solid fa-calendar fa-fw"></i>
+            </span>
+            2023/6/2
+        </span>
+        
+        
+    </div>
+    <div class="description">
+        <div class="content" v-pre>
+            
+            <p>##java 代码审计之命令执行的多种方式<br>
+ ### 三种基本执行方式</p>
+<pre><code>java.lang.Runtime#exec()     
+java.lang.ProcessBuilder#start()
+java.lang.ProcessImpl#start()
+</code></pre>
+<p>####Runtime  基本执行方式</p>
+<pre><code>Process Runexec = Runtime.getRuntime().exec(&quot;cmd /c dir&quot;);  #通过调用Runtime类的静态方法getRuntime返回的runtime类的方法exec来执行命令
+InputStream in = Runexec.getInputStream();#返回的数据流要经过手动输出，才能出现在终端中
+ByteArrayOutputStream bos = new ByteArrayOutputStream();
+byte[] bytes = new byte[1024];
+int size;
+while((size = in.read(bytes)) &gt; 0)
+    bos.write(bytes,0,size);
+System.out.println(bos.toString());
+</code></pre>
+<p>runtime.exec 调用</p>
+<pre><code>return new ProcessBuilder(cmdarray)
+            .environment(envp)
+            .directory(dir)
+            .start();
+</code></pre>
+<p>分析 ProcessBuilder start 方法  大致分为三块</p>
+<pre><code>public Process start() throws IOException &#123;
+        
+    SecurityManager security = System.getSecurityManager();    #存在一个安全性检查，只有配置了安全策略才会生效
+        if (security != null)
+            security.checkExec(prog);
+
+        String dir = directory == null ? null : directory.toString();
+
+        for (int i = 1; i &lt; cmdarray.length; i++) &#123;  #不允许有\x0000字节的存在，只能有\x00
+            if (cmdarray[i].indexOf('\u0000') &gt;= 0) &#123;
+                throw new IOException(&quot;invalid null character in command&quot;);
+            &#125;
+        &#125;
+
+        
+        return ProcessImpl.start(cmdarray,       #调用ProcessImpl.start()方法执行命令
+                                     environment,
+                                     dir,
+                                     redirects,
+                                     redirectErrorStream);
+    &#125;
+</code></pre>
+<p>ProcessImpl start 方法构造新的类 ProcessImpl</p>
+<pre><code>static Process start(String cmdarray[],
+                         java.util.Map&lt;String,String&gt; environment,
+                         String dir,
+                         ProcessBuilder.Redirect[] redirects,
+                         boolean redirectErrorStream)
+                    return new ProcessImpl(cmdarray, envblock, dir,
+                                   stdHandles, redirectErrorStream);
+                     
+</code></pre>
+<p>本质上三种方法都是在调用 ProcessImpl.start ()<br>
+ 模拟调用</p>
+<pre><code>Process Runexec = Runtime.getRuntime().exec(&quot;calc&quot;);  #成功执行
+Process p = new ProcessBuilder(new String[]&#123;&quot;cmd&quot;,&quot;/c&quot;,&quot;dir&quot;&#125;).enviroment(null).directory(null).start();    #enviroment方法时内部方法，无法外部调用
+去掉enviroment，执行成功
+Process p = new ProcessBuilder(new String[]&#123;&quot;cmd&quot;,&quot;/c&quot;,&quot;dir&quot;&#125;).directory(null).start();
+
+Process p = ProcessPml.start(new String[]&#123;&quot;cmd&quot;,&quot;/c&quot;,&quot;dir&quot;&#125;,null,null,null,null,null);    #ProcessPml.start 该方法作用域为defualt无法外部调用
+</code></pre>
+<p>作用域调用失败，可以参考下一篇 java 反射的原理获取方法，执行命令</p>
+
+            
+        </div>
+    </div>
+    <div class="post-tags">
+        
+        <span class="icon">
+            <i class="fa-solid fa-tags fa-fw"></i>
+        </span>
+        
+        
+        <span class="tag">
+            
+            <a href="/tags/java%E4%BB%A3%E7%A0%81%E5%AE%A1%E8%AE%A1/" style="color: #00bcd4">java代码审计</a>
+        </span>
+        
+        <span class="tag">
+            
+            <a href="/tags/%E5%91%BD%E4%BB%A4%E6%89%A7%E8%A1%8C/" style="color: #03a9f4">命令执行</a>
+        </span>
+        
+    </div>
+    <a href="/2023/06/02/javacmd/" class="go-post">阅读全文</a>
+</div>
+
+<div class="post">
+    <a href="/2023/06/02/sa/">
         <h2 class="post-title">java反序列化 cc1</h2>
     </a>
     <div class="category-and-date">
@@ -195,8 +350,10 @@
     <div class="description">
         <div class="content" v-pre>
             
-            <p>#asdasdsa<br>
-#hello</p>
+            <p>##CommonsCollections cc1<br>
+### 标准攻击链</p>
+<pre><code class="language-bash">
+</code></pre>
 
             
         </div>
@@ -213,8 +370,13 @@
             <a href="/tags/java/" style="color: #00a596">java</a>
         </span>
         
+        <span class="tag">
+            
+            <a href="/tags/commencollection%E5%8F%8D%E5%BA%8F%E5%88%97%E5%8C%96/" style="color: #00a596">commencollection反序列化</a>
+        </span>
+        
     </div>
-    <a href="/2023/06/02/javacc1/" class="go-post">阅读全文</a>
+    <a href="/2023/06/02/sa/" class="go-post">阅读全文</a>
 </div>
 
 
